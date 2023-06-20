@@ -261,6 +261,31 @@
   #include "tests/marlin_tests.h"
 #endif
 
+#define EXTR_SPD_CTRL true
+
+#if EXTR_SPD_CTRL
+  #include "AccelStepper/AccelStepper.h"
+
+  // This defines the analog input pin for reading the control voltage
+  // Tested with a 10k linear pot between 5v and GND
+  #define SPEED_REF_IN A5
+  #define ON_CMD_IN A10
+  #define DIR_IN A12
+
+  // E1_STEP_PIN    36
+  // E1_DIR_PIN     34
+  // E1_ENABLE_PIN  30
+  // E1_CS_PIN      44
+
+  // E0_STEP_PIN      26
+  // E0_DIR_PIN       28
+  // E0_ENABLE_PIN    24
+  // E0_CS_PIN        42
+
+  AccelStepper ExtrStepper(AccelStepper::DRIVER, E1_STEP_PIN, E1_DIR_PIN);
+
+#endif
+
 PGMSTR(M112_KILL_STR, "M112 Shutdown");
 
 MarlinState marlin_state = MF_INITIALIZING;
@@ -1648,6 +1673,17 @@ void setup() {
   SETUP_LOG("setup() completed.");
 
   TERN_(MARLIN_TEST_BUILD, runStartupTests());
+
+  #ifdef EXTR_SPD_CTRL
+    ExtrStepper.setPinsInverted(false,false,true); //directionInvert, stepInvert, enableInvert
+    ExtrStepper.setMaxSpeed(10000);
+    ExtrStepper.setEnablePin(E1_ENABLE_PIN);
+    ExtrStepper.setAcceleration(20.0);
+    ExtrStepper.setSpeed(4*(360/1.8)); //1 rps
+    //E1_ENABLE_INIT();
+    //E1_ENABLE_WRITE(0);
+    ExtrStepper.setMinPulseWidth(50);
+  #endif
 }
 
 /**
@@ -1664,6 +1700,8 @@ void setup() {
  *    as long as idle() or manage_inactivity() are being called.
  */
 void loop() {
+  int i = 0;
+
   do {
     idle();
 
@@ -1671,6 +1709,7 @@ void loop() {
       if (card.flag.abort_sd_printing) abortSDPrinting();
       if (marlin_state == MF_SD_COMPLETE) finishSDPrinting();
     #endif
+
 
     queue.advance();
 
@@ -1683,6 +1722,40 @@ void loop() {
     TERN_(HAS_TFT_LVGL_UI, printer_state_polling());
 
     TERN_(MARLIN_TEST_BUILD, runPeriodicTests());
+
+    #ifdef EXTR_SPD_CTRL
+      // Read new position
+      int Speed_Ref = analogRead(SPEED_REF_IN);
+      // read the on command
+      int On_Cmd = digitalRead(ON_CMD_IN);
+      // read the direction
+      int Dir = digitalRead(DIR_IN);
+
+      if (Dir = 1) {
+        ExtrStepper.setSpeed(Speed_Ref);}
+      else{
+        ExtrStepper.setSpeed(-Speed_Ref);}
+
+      if (On_Cmd = 1) {
+        ExtrStepper.enableOutputs();}
+      else{
+        ExtrStepper.disableOutputs();}
+
+      ExtrStepper.runSpeed();
+
+      // debug infos
+      if (i<1) {
+        SERIAL_ECHOLNPGM_P(
+        PSTR("Speed ref :"), LINEAR_UNIT(Speed_Ref)
+        , PSTR(" Speed act :"), LINEAR_UNIT(On_Cmd)
+        , PSTR(" On Command :"), ExtrStepper.speed()
+        );
+        i=1000;
+      }
+      else{
+        i--;
+      }
+    #endif
 
   } while (ENABLED(__AVR__)); // Loop forever on slower (AVR) boards
 }

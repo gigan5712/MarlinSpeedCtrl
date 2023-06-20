@@ -360,6 +360,10 @@ public:
     axis_relative = AxisBits(AXIS_RELATIVE_MODES).bits;
   }
 
+  ~GcodeSuite() { // Relative motion mode for each logical axis
+
+  }
+
   static bool axis_is_relative(const AxisEnum a) {
     #if HAS_EXTRUDERS
       if (a == E_AXIS) {

@@ -194,7 +194,6 @@
 #ifndef E1_CS_PIN
   #define E1_CS_PIN                           44
 #endif
-
 //
 // Temperature Sensors
 //

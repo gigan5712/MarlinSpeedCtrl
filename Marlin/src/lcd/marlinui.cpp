@@ -1109,7 +1109,7 @@ void MarlinUI::init() {
       if (on_status_screen() && !lcd_status_update_delay--) {
         lcd_status_update_delay = TERN(HAS_MARLINUI_U8GLIB, 12, 9);
         if (max_display_update_time) max_display_update_time--;  // Be sure never go to a very big number
-        refresh(LCDVIEW_REDRAW_NOW);
+        //refresh(LCDVIEW_REDRAW_NOW);
       }
 
       #if ALL(HAS_MARLINUI_MENU, SCROLL_LONG_FILENAMES)
